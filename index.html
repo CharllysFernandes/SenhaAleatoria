@@ -4,19 +4,122 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
         integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <link rel="stylesheet" href="/src/styles.css">
     <title>Meu Gerador de Senhas</title>
 </head>
 
 <body>
-    <main class="">
-        <h1>Gerador de Senhas Aleatórias</h1>
+    <main class="d-flex align-items-center justify-content-center min-vh-100">
+        <div class="card" style="width: 22rem;">
+            <div class="card-body">
+                <h1 class="card-title text-primary">Meu Gerador de Senhas</h1>
+                <span class="card-text">Este é apenas um projeto para criar senhas fáceis de copiar e fácil de
+                    personalizar.</span>
+                <div class="input-group mt-2 form-control">
+                    <input type="text" id="senha" class="form-control border-0" readonly>
+                    <button class="btn border-start" onclick="gerarSenha()"><i
+                            class="bi bi-arrow-clockwise"></i></button>
+                    <button class="btn btn-primary" onclick="copiarSenha()">Copiar</button>
+                </div>
+                <div class="mt-3 mb-4">
+                    <label for="tamanhoSenha" class="form-label">Tamanho: <span id="tamanhoValor">12</span>
+                        caracteres</label>
+                    <input type="range" class="form-range" min="4" max="64" step="1" id="tamanhoSenha" value="12"
+                        oninput="atualizarValorTamanho()">
+                </div>
 
+                <div class="d-flex border-top border-light-subtle flex-row justify-content-between p-2">
+                    <span>Usar letras</span>
+                    <label class="switch">
+                        <input type="checkbox" id="usarLetras" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="d-flex border-top border-light-subtle flex-row justify-content-between p-2">
+                    <span>Usar números</span>
+                    <label class="switch">
+                        <input type="checkbox" id="usarNumeros" checked>
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+                <div class="d-flex border-top border-light-subtle flex-row justify-content-between p-2">
+                    <span>Usar caracteres especiais</span>
+                    <label class="switch">
+                        <input type="checkbox" id="usarCaracteresEspeciais">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+
+            </div>
+        </div>
     </main>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
         integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz"
         crossorigin="anonymous"></script>
+
+    <script>
+        function gerarSenha() {
+            const usarLetras = document.getElementById("usarLetras").checked;
+            const usarNumeros = document.getElementById("usarNumeros").checked;
+            const usarCaracteresEspeciais = document.getElementById("usarCaracteresEspeciais").checked;
+
+            let chars = "";
+
+            if (usarLetras) {
+                chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+            }
+            if (usarNumeros) {
+                chars += "0123456789";
+            }
+            if (usarCaracteresEspeciais) {
+                chars += "!@#$%^&*()_=+[]{}|;:'\",.<>?/`~";
+            }
+
+            const tamanhoSenha = document.getElementById("tamanhoSenha").value;
+            let senha = "";
+            for (let i = 0; i < tamanhoSenha; i++) {
+                senha += chars.charAt(Math.floor(Math.random() * chars.length));
+            }
+
+            // Divisão da senha em blocos conforme o tamanho
+            let senhaFormatada = "";
+            if (tamanhoSenha > 16) {
+                for (let i = 0; i < senha.length; i += 8) {
+                    senhaFormatada += senha.slice(i, i + 8) + "-";
+                }
+            } else if (tamanhoSenha > 12) {
+                for (let i = 0; i < senha.length; i += 6) {
+                    senhaFormatada += senha.slice(i, i + 6) + "-";
+                }
+            } else {
+                let metade = Math.ceil(senha.length / 2);
+                senhaFormatada = senha.slice(0, metade) + "-" + senha.slice(metade);
+            }
+
+            document.getElementById("senha").value = senhaFormatada.trim();
+        }
+
+        function copiarSenha() {
+            const senhaInput = document.getElementById("senha");
+            senhaInput.select();
+            senhaInput.setSelectionRange(0, 99999); // Para dispositivos móveis
+            document.execCommand("copy");
+
+            // Exibe uma mensagem de confirmação
+            alert("Senha copiada para a área de transferência!");
+        }
+
+        function atualizarValorTamanho() {
+            const tamanhoSenha = document.getElementById("tamanhoSenha").value;
+            document.getElementById("tamanhoValor").innerText = tamanhoSenha;
+        }
+    </script>
+
+
 </body>
 
 </html>
