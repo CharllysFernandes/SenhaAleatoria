@@ -24,6 +24,7 @@
                             class="bi bi-arrow-clockwise"></i></button>
                     <button class="btn btn-primary" onclick="copiarSenha()">Copiar</button>
                 </div>
+                <span id="tempoQuebra" class="text-muted text-info fw-lighter"></span>
                 <div class="mt-3 mb-4">
                     <label for="tamanhoSenha" class="form-label">Tamanho: <span id="tamanhoValor">12</span>
                         caracteres</label>
@@ -101,6 +102,8 @@
             }
 
             document.getElementById("senha").value = senhaFormatada.trim();
+            // Calcular o tempo para quebrar a senha
+            calcularTempoQuebra(chars.length, tamanhoSenha);
         }
 
         function copiarSenha() {
@@ -116,6 +119,30 @@
         function atualizarValorTamanho() {
             const tamanhoSenha = document.getElementById("tamanhoSenha").value;
             document.getElementById("tamanhoValor").innerText = tamanhoSenha;
+        }
+        function calcularTempoQuebra(numCaracteres, comprimentoSenha) {
+            const tentativasPorSegundo = 1000000000; // 1 bilhão de tentativas por segundo
+            const totalCombinacoes = Math.pow(numCaracteres, comprimentoSenha);
+            const tempoSegundos = totalCombinacoes / tentativasPorSegundo;
+            const tempoDias = tempoSegundos / (60 * 60 * 24);
+            let tempoQuebra = "";
+
+            if (tempoDias > 365 * 100) {
+                const tempoSeculos = tempoDias / (365 * 100);
+                tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoSeculos.toFixed(0)} séculos.`;
+            } else if (tempoDias > 365 * 10) {
+                const tempoDecadas = tempoDias / (365 * 10);
+                tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoDecadas.toFixed(0)} décadas.`;
+            } else if (tempoDias > 365) {
+                const tempoAnos = tempoDias / 365;
+                tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoAnos.toFixed(0)} anos.`;
+            } else {
+                tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoDias.toFixed(0)} dias.`;
+            }
+
+            document.getElementById("tempoQuebra").innerText = tempoQuebra;
+
+            document.getElementById("tempoQuebra").innerText = tempoQuebra;
         }
     </script>
 
