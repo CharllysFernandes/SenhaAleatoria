@@ -25,6 +25,8 @@
                     <button class="btn btn-primary" onclick="copiarSenha()">Copiar</button>
                 </div>
                 <span id="tempoQuebra" class="text-muted text-info fw-lighter"></span>
+                <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="right"
+                    title="O cálculo da força bruta envolve tentar todas as combinações possíveis de caracteres até encontrar a senha correta. O tempo estimado depende do número de caracteres possíveis, do comprimento da senha e da taxa de tentativas por segundo, aqui usamos 1 bilhão de tentativas por segundo"></i>
                 <div class="mt-3 mb-4">
                     <label for="tamanhoSenha" class="form-label">Tamanho: <span id="tamanhoValor">12</span>
                         caracteres</label>
@@ -51,6 +53,13 @@
                     <span>Usar caracteres especiais</span>
                     <label class="switch">
                         <input type="checkbox" id="usarCaracteresEspeciais">
+                        <span class="slider"></span>
+                    </label>
+                </div>
+                <div class="d-flex border-top border-light-subtle flex-row justify-content-between p-2">
+                    <span>Usar "passphrases"</span>
+                    <label class="switch">
+                        <input type="checkbox" id="usarPassphrases">
                         <span class="slider"></span>
                     </label>
                 </div>
