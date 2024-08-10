@@ -1,6 +1,9 @@
 body{
     background-image: linear-gradient(to top, #a8edea 0%, #fed6e3 100%);
 }
+#senha{
+    font-family: 'Inconsolata', monospace;
+}
 
 /* Toggle */
 /* The switch - the box around the slider */
