@@ -2,8 +2,18 @@ body{
     background-image: linear-gradient(to top, #a8edea 0%, #fed6e3 100%);
 }
 #senha{
-    font-family: 'Inconsolata', monospace;
+    font-family: 'Inconsolata';
 }
+
+#tempoQuebra{
+            display: inline-block;
+            width: 100%;
+            min-height: 3em;
+            /* Ajuste conforme necessário */
+            /* white-space: nowrap; */
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
 /* Toggle */
 /* The switch - the box around the slider */

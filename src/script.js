@@ -64,20 +64,46 @@ function calcularTempoQuebra(numCaracteres, comprimentoSenha) {
     const tempoDias = tempoSegundos / (60 * 60 * 24);
     let tempoQuebra = "";
 
-    if (tempoDias > 365 * 100) {
-        const tempoSeculos = tempoDias / (365 * 100);
+    if (tempoDias > 365 * 10000000000) { // 10 milênios
+        const tempoMilhoes = tempoDias / (365 * 1000000000); // Convertendo para milhões de anos
+        tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoMilhoes.toExponential(2)} milhões de anos.`;
+    } else if (tempoDias > 365 * 1000000) { // 1 milênio
+        const tempoMilenios = tempoDias / (365 * 1000); // Convertendo para milênios
+        tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoMilenios.toFixed(0)} milênios.`;
+    } else if (tempoDias > 365 * 100) { // 100 anos (1 século)
+        const tempoSeculos = tempoDias / (365 * 100); // Convertendo para séculos
         tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoSeculos.toFixed(0)} séculos.`;
-    } else if (tempoDias > 365 * 10) {
-        const tempoDecadas = tempoDias / (365 * 10);
+    } else if (tempoDias > 365 * 10) { // 10 anos (1 década)
+        const tempoDecadas = tempoDias / (365 * 10); // Convertendo para décadas
         tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoDecadas.toFixed(0)} décadas.`;
-    } else if (tempoDias > 365) {
-        const tempoAnos = tempoDias / 365;
+    } else if (tempoDias > 365) { // 1 ano
+        const tempoAnos = tempoDias / 365; // Convertendo para anos
         tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoAnos.toFixed(0)} anos.`;
     } else {
         tempoQuebra = `Tempo estimado para quebrar a senha: aproximadamente ${tempoDias.toFixed(0)} dias.`;
     }
 
-    document.getElementById("tempoQuebra").innerText = tempoQuebra;
+    const tempoQuebraElement = document.getElementById("tempoQuebra");
 
-    document.getElementById("tempoQuebra").innerText = tempoQuebra;
+    // Atualiza o texto do tempo de quebra
+    tempoQuebraElement.innerText = tempoQuebra;
+
+    // Cria o ícone de tooltip
+    const infoIcon = document.createElement("i");
+    infoIcon.className = "bi bi-info-circle ms-2";
+    infoIcon.setAttribute("data-bs-toggle", "tooltip");
+    infoIcon.setAttribute("data-bs-placement", "right");
+    infoIcon.setAttribute("title", "O cálculo da força bruta envolve tentar todas as combinações possíveis de caracteres até encontrar a senha correta. O tempo estimado depende do número de caracteres possíveis, do comprimento da senha e da taxa de tentativas por segundo, aqui usamos 1 bilhão de tentativas por segundo.");
+
+    // Remove o ícone de tooltip existente, se houver
+    const existingIcon = tempoQuebraElement.nextSibling;
+    if (existingIcon && existingIcon.tagName === "I") {
+        existingIcon.remove();
+    }
+
+    // Adiciona o novo ícone de tooltip
+    tempoQuebraElement.parentNode.appendChild(infoIcon);
+
+    // Inicializa o tooltip
+    const tooltip = new bootstrap.Tooltip(infoIcon);
 }

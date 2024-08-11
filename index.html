@@ -22,14 +22,15 @@
                 <span class="card-text text-muted fs-6">Este é um projeto para criar senhas fáceis de copiar e fácil de
                     personalizar.</span>
                 <div class="input-group mt-2 form-control">
-                    <input type="text" id="senha" class="form-control border-0 fs-5" readonly>
+                    <input type="text" id="senha" class="form-control border-0 fs-5 text-success font-monospace" readonly>
                     <button class="btn border-start" onclick="gerarSenha()"><i
                             class="bi bi-arrow-clockwise"></i></button>
                     <button class="btn btn-primary" onclick="copiarSenha()">Copiar</button>
                 </div>
-                <span id="tempoQuebra" class="text-muted text-info fw-lighter"></span>
-                <i class="bi bi-info-circle" data-bs-toggle="tooltip" data-bs-placement="right"
-                    title="O cálculo da força bruta envolve tentar todas as combinações possíveis de caracteres até encontrar a senha correta. O tempo estimado depende do número de caracteres possíveis, do comprimento da senha e da taxa de tentativas por segundo, aqui usamos 1 bilhão de tentativas por segundo"></i>
+                <div class="d-flex align-items-center">
+                    <span id="tempoQuebra" class="text-muted text-info fw-lighter">
+                    </div>
+                </span>
                 <div class="mt-3 mb-4">
                     <label for="tamanhoSenha" class="form-label">Tamanho: <span id="tamanhoValor">8</span>
                         caracteres</label>
