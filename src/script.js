@@ -51,31 +51,62 @@ let ultimoComprimentoSenha = DEFAULT_PASSWORD_LENGTH;
 let ultimoNumeroPalavras = DEFAULT_PASSPHRASE_LENGTH;
 
 // ===== Utilidades gerais =====
+/**
+ * Shortcut para recuperar elementos do DOM por id sem repetir document.getElementById.
+ * @param {string} id - Identificador do elemento.
+ * @returns {HTMLElement|null} Elemento encontrado ou null.
+ */
 function getElement(id) {
     return document.getElementById(id);
 }
 
+/**
+ * Recupera o slider que controla o tamanho da senha/passphrase.
+ * @returns {HTMLInputElement}
+ */
 function getSlider() {
     return getElement("tamanhoSenha");
 }
 
+/**
+ * Recupera o input que exibe a senha atual.
+ * @returns {HTMLInputElement}
+ */
 function getSenhaInput() {
     return getElement("senha");
 }
 
+/**
+ * Recupera o elemento que mostra o estimador de tempo de quebra.
+ * @returns {HTMLElement|null}
+ */
 function getTempoQuebraElement() {
     return getElement("tempoQuebra");
 }
 
+/**
+ * Informa se o usuário está no modo passphrase.
+ * @returns {boolean}
+ */
 function estaEmModoPassphrase() {
     const toggle = getElement("usarPassphrases");
     return Boolean(toggle?.checked);
 }
 
+/**
+ * Limita um valor dentro de um intervalo numérico.
+ * @param {number} valor - Valor desejado.
+ * @param {number} minimo - Limite inferior.
+ * @param {number} maximo - Limite superior.
+ * @returns {number}
+ */
 function clamp(valor, minimo, maximo) {
     return Math.min(Math.max(valor, minimo), maximo);
 }
 
+/**
+ * Ajusta o slider (min, max, step, label e valor) conforme o modo ativo.
+ */
 function configurarSliderParaModoAtual() {
     const slider = getSlider();
     const label = getElement("tamanhoLabel");
@@ -91,10 +122,16 @@ function configurarSliderParaModoAtual() {
     atualizarValorTamanho();
 }
 
+/**
+ * Handler disparado ao alternar o modo passphrase.
+ */
 function handlePassphraseToggle() {
     configurarSliderParaModoAtual();
 }
 
+/**
+ * Atualiza o badge que mostra o tamanho atual e memoriza o último valor usado em cada modo.
+ */
 function atualizarValorTamanho() {
     const slider = getSlider();
     const badge = getElement("tamanhoValor");
@@ -110,6 +147,9 @@ function atualizarValorTamanho() {
 }
 
 // ===== Geração de combinações =====
+/**
+ * Ponto único para gerar senhas ou passphrases e propagar efeitos colaterais (UI, storage, cálculo).
+ */
 function gerarSenha() {
     const resultado = estaEmModoPassphrase() ? gerarResultadoPassphrase() : gerarResultadoAlfanumerico();
     if (!resultado) {
@@ -122,6 +162,10 @@ function gerarSenha() {
     carregarSenhasDoStorage();
 }
 
+/**
+ * Gera uma passphrase com base na lista Diceware carregada.
+ * @returns {{senha: string, cardinalidade: number, comprimento: number}|null}
+ */
 function gerarResultadoPassphrase() {
     if (!PASS_PHRASE_LIST.length) {
         alert("A lista de palavras ainda não foi carregada. Tente novamente mais tarde.");
@@ -143,6 +187,10 @@ function gerarResultadoPassphrase() {
     };
 }
 
+/**
+ * Gera uma senha alfanumérica formatada de acordo com as opções marcadas.
+ * @returns {{senha: string, cardinalidade: number, comprimento: number}|null}
+ */
 function gerarResultadoAlfanumerico() {
     const usarLetras = getElement("usarLetras")?.checked;
     const usarNumeros = getElement("usarNumeros")?.checked;
@@ -165,11 +213,22 @@ function gerarResultadoAlfanumerico() {
     };
 }
 
+/**
+ * Atualiza o campo principal com a combinação gerada.
+ * @param {string} valor - Senha ou passphrase final.
+ */
 function atualizarCampoSenha(valor) {
     const input = getSenhaInput();
     input.value = valor;
 }
 
+/**
+ * Monta o conjunto de caracteres permitido com base nas opções marcadas.
+ * @param {boolean} usarLetras
+ * @param {boolean} usarNumeros
+ * @param {boolean} usarCaracteresEspeciais
+ * @returns {string} String contendo todos os caracteres permitidos.
+ */
 function obterCaracteres(usarLetras, usarNumeros, usarCaracteresEspeciais) {
     let chars = "";
     if (usarLetras) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -178,6 +237,11 @@ function obterCaracteres(usarLetras, usarNumeros, usarCaracteresEspeciais) {
     return chars;
 }
 
+/**
+ * Gera um índice aleatório com distribuição uniforme usando crypto.getRandomValues (ou Math.random como fallback).
+ * @param {number} limite - Tamanho da lista.
+ * @returns {number} Índice seguro.
+ */
 function gerarIndiceAleatorio(limite) {
     if (limite <= 0) {
         return 0;
@@ -200,6 +264,12 @@ function gerarIndiceAleatorio(limite) {
     }
 }
 
+/**
+ * Constrói uma string aleatória de tamanho arbitrário usando o helper de índice seguro.
+ * @param {string} chars - Conjunto de caracteres possíveis.
+ * @param {number} tamanho - Comprimento desejado.
+ * @returns {string}
+ */
 function gerarStringAleatoria(chars, tamanho) {
     let resultado = "";
     for (let i = 0; i < tamanho; i++) {
@@ -210,6 +280,12 @@ function gerarStringAleatoria(chars, tamanho) {
 }
 
 // ===== Formatação e análise =====
+/**
+ * Decide a melhor estratégia de visualização para a senha conforme o comprimento.
+ * @param {number} tamanhoSenha
+ * @param {string} senha
+ * @returns {string}
+ */
 function formatarSenha(tamanhoSenha, senha) {
     if (tamanhoSenha > 16) {
         return dividirEmBlocos(senha, 8);
@@ -220,6 +296,12 @@ function formatarSenha(tamanhoSenha, senha) {
     return dividirAoMeio(senha);
 }
 
+/**
+ * Segmenta a senha em blocos de mesmo tamanho, ajustando quando possível divisores naturais.
+ * @param {string} senha
+ * @param {number} tamanhoBloco
+ * @returns {string}
+ */
 function dividirEmBlocos(senha, tamanhoBloco) {
     let resultado = "";
     const numBlocos = Math.floor(senha.length / tamanhoBloco);
@@ -240,11 +322,21 @@ function dividirEmBlocos(senha, tamanhoBloco) {
     return resultado.slice(0, -1);
 }
 
+/**
+ * Divide a senha em duas partes iguais (ou quase) e injeta um hífen central.
+ * @param {string} senha
+ * @returns {string}
+ */
 function dividirAoMeio(senha) {
     const metade = Math.ceil(senha.length / 2);
     return senha.slice(0, metade) + "-" + senha.slice(metade);
 }
 
+/**
+ * Calcula o tempo estimado para quebrar a senha via força bruta e alimenta a UI.
+ * @param {number} numCaracteres - Cardinalidade do alfabeto.
+ * @param {number} comprimentoSenha - Comprimento da combinação.
+ */
 function calcularTempoQuebra(numCaracteres, comprimentoSenha) {
     if (!numCaracteres || !comprimentoSenha || numCaracteres <= 0 || comprimentoSenha <= 0) {
         renderizarTempoQuebra("Gere uma combinação para estimar o tempo de quebra.");
@@ -267,6 +359,11 @@ function calcularTempoQuebra(numCaracteres, comprimentoSenha) {
     );
 }
 
+/**
+ * Define o rótulo (ex.: Resistente) e a descrição baseada em log10(tempo em dias).
+ * @param {number} log10TempoDias
+ * @returns {{rotulo: string, descricao: string}}
+ */
 function obterResumoTempo(log10TempoDias) {
     for (const faixa of FAIXAS_TEMPO) {
         if (log10TempoDias > faixa.limite) {
@@ -283,6 +380,12 @@ function obterResumoTempo(log10TempoDias) {
     };
 }
 
+/**
+ * Converte um valor logarítmico na apresentação textual humanizada.
+ * @param {number} logValor - log10 do valor na unidade desejada.
+ * @param {string} unidade - Nome da unidade (dias, anos...).
+ * @returns {string}
+ */
 function formatarEscala(logValor, unidade) {
     if (!Number.isFinite(logValor)) {
         return `praticamente impossível em termos de ${unidade}`;
@@ -308,6 +411,10 @@ function formatarEscala(logValor, unidade) {
     return `aproximadamente ${texto} ${unidade}`;
 }
 
+/**
+ * Garante que sempre exista um tooltip atualizado com as premissas do cálculo.
+ * @param {HTMLElement} element - Elemento alvo do selo de tempo.
+ */
 function criarTooltip(element) {
     if (!element || !element.parentNode) return;
 
@@ -333,6 +440,11 @@ function criarTooltip(element) {
     new bootstrap.Tooltip(infoIcon);
 }
 
+/**
+ * Centraliza a renderização do selo de tempo, lidando com estados vazios/HTML/tooltip.
+ * @param {string} conteudo - Texto ou HTML a ser exibido.
+ * @param {boolean} [usarHTML=false] - Se true, define innerHTML; caso contrário usa innerText.
+ */
 function renderizarTempoQuebra(conteudo, usarHTML = false) {
     const destino = getTempoQuebraElement();
     if (!destino) return;
@@ -355,6 +467,10 @@ function renderizarTempoQuebra(conteudo, usarHTML = false) {
 }
 
 // ===== Persistência =====
+/**
+ * Persiste o valor atual no localStorage preservando registros antigos.
+ * @param {string} senha - Senha ou passphrase já formatada.
+ */
 function salvarSenhaNoStorage(senha) {
     const senhasArmazenadas = JSON.parse(localStorage.getItem("senhas")) || [];
     const senhasNormalizadas = senhasArmazenadas.map((item) =>
@@ -369,6 +485,9 @@ function salvarSenhaNoStorage(senha) {
     localStorage.setItem("senhas", JSON.stringify(senhasNormalizadas));
 }
 
+/**
+ * Reconstrói a lista do histórico na UI a partir do localStorage.
+ */
 function carregarSenhasDoStorage() {
     const historicoSenhas = getElement("historicoSenhas");
     historicoSenhas.innerHTML = "";
@@ -418,6 +537,11 @@ function carregarSenhasDoStorage() {
     });
 }
 
+/**
+ * Converte timestamps em strings legíveis para o histórico.
+ * @param {string|undefined} timestamp - ISO string salva anteriormente.
+ * @returns {string}
+ */
 function formatarDataDoHistorico(timestamp) {
     if (!timestamp) {
         return "Gerada antes do registro";
@@ -434,6 +558,10 @@ function formatarDataDoHistorico(timestamp) {
     }).format(data)}`;
 }
 
+/**
+ * Remove uma senha específica do histórico e sincroniza a UI.
+ * @param {number} index - Posição da senha no array salvo.
+ */
 function excluirSenhaDoStorage(index) {
     const senhas = JSON.parse(localStorage.getItem("senhas")) || [];
     senhas.splice(index, 1);
@@ -442,6 +570,9 @@ function excluirSenhaDoStorage(index) {
 }
 
 // ===== Interação com UI =====
+/**
+ * Copia o valor atual para a área de transferência usando execCommand para suportar navegadores antigos.
+ */
 function copiarSenha() {
     const senhaInput = getSenhaInput();
     senhaInput.select();
@@ -450,6 +581,9 @@ function copiarSenha() {
     alert("Senha copiada para a área de transferência!");
 }
 
+/**
+ * Configura listeners e estado inicial assim que o DOM estiver pronto.
+ */
 function inicializarAplicacao() {
     const passphraseToggle = getElement("usarPassphrases");
     passphraseToggle?.addEventListener("change", handlePassphraseToggle);
