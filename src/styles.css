@@ -377,6 +377,12 @@ body {
         flex-direction: column;
     }
 
+    .password-field .input-group-text,
+    .password-field .form-control {
+        width: 100%;
+        flex: none;
+    }
+
     .password-field .btn {
         width: 100%;
         border-left: none;
