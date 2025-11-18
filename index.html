@@ -81,7 +81,9 @@
 
                     <div class="range-control mt-4">
                         <div class="d-flex justify-content-between align-items-center">
-                            <label for="tamanhoSenha" class="form-label mb-0">Tamanho da senha</label>
+                            <label for="tamanhoSenha" class="form-label mb-0">
+                                <span id="tamanhoLabel">Tamanho da senha</span>
+                            </label>
                             <span class="badge rounded-pill bg-primary-subtle text-primary" id="tamanhoValor">10</span>
                         </div>
                         <input type="range" class="form-range" min="4" max="64" step="2" id="tamanhoSenha" value="10"
@@ -137,6 +139,7 @@
     </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="./src/passphraseWords.js"></script>
     <script src="./src/script.js"></script>
 </body>
 

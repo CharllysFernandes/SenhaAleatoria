@@ -1,11 +1,73 @@
-// Função para gerar senha
+const PASS_PHRASE_LIST = typeof PASS_PHRASE_WORDS !== "undefined" ? PASS_PHRASE_WORDS : [];
+const DEFAULT_PASSWORD_LENGTH = 10;
+const DEFAULT_PASSPHRASE_LENGTH = 4;
+const RANGE_CONFIG = {
+    senha: { min: 4, max: 64, step: 2, label: "Tamanho da senha" },
+    passphrase: { min: 3, max: 12, step: 1, label: "Número de palavras" }
+};
+
+let ultimoComprimentoSenha = DEFAULT_PASSWORD_LENGTH;
+let ultimoNumeroPalavras = DEFAULT_PASSPHRASE_LENGTH;
+
+function estaEmModoPassphrase() {
+    return document.getElementById("usarPassphrases").checked;
+}
+
+function clamp(valor, minimo, maximo) {
+    return Math.min(Math.max(valor, minimo), maximo);
+}
+
+function configurarSliderParaModoAtual() {
+    const slider = document.getElementById("tamanhoSenha");
+    const label = document.getElementById("tamanhoLabel");
+    const modoPassphrase = estaEmModoPassphrase();
+    const config = modoPassphrase ? RANGE_CONFIG.passphrase : RANGE_CONFIG.senha;
+
+    slider.min = config.min;
+    slider.max = config.max;
+    slider.step = config.step;
+
+    const valor = modoPassphrase ? ultimoNumeroPalavras : ultimoComprimentoSenha;
+    slider.value = clamp(valor, config.min, config.max);
+    label.textContent = config.label;
+    atualizarValorTamanho();
+}
+
+function handlePassphraseToggle() {
+    configurarSliderParaModoAtual();
+}
+
+// Função para gerar senha ou passphrase
 function gerarSenha() {
+    const slider = document.getElementById("tamanhoSenha");
+    const usarPassphrases = estaEmModoPassphrase();
+
+    if (usarPassphrases) {
+        if (!PASS_PHRASE_LIST.length) {
+            alert("A lista de palavras ainda não foi carregada. Tente novamente mais tarde.");
+            return;
+        }
+
+        const quantidadePalavras = parseInt(slider.value, 10);
+        const passphrase = gerarPassphrase(quantidadePalavras);
+        document.getElementById("senha").value = passphrase;
+        calcularTempoQuebra(PASS_PHRASE_LIST.length, quantidadePalavras);
+        salvarSenhaNoStorage(passphrase);
+        carregarSenhasDoStorage();
+        return;
+    }
+
     const usarLetras = document.getElementById("usarLetras").checked;
     const usarNumeros = document.getElementById("usarNumeros").checked;
     const usarCaracteresEspeciais = document.getElementById("usarCaracteresEspeciais").checked;
 
     const chars = obterCaracteres(usarLetras, usarNumeros, usarCaracteresEspeciais);
-    const tamanhoSenha = document.getElementById("tamanhoSenha").value;
+    if (!chars.length) {
+        alert("Selecione pelo menos um conjunto de caracteres para gerar a senha.");
+        return;
+    }
+
+    const tamanhoSenha = parseInt(slider.value, 10);
     const senha = gerarStringAleatoria(chars, tamanhoSenha);
 
     const senhaFormatada = formatarSenha(tamanhoSenha, senha);
@@ -14,6 +76,15 @@ function gerarSenha() {
     calcularTempoQuebra(chars.length, tamanhoSenha);
     salvarSenhaNoStorage(senhaFormatada.trim());
     carregarSenhasDoStorage();
+}
+
+function gerarPassphrase(quantidadePalavras) {
+    const palavras = [];
+    for (let i = 0; i < quantidadePalavras; i++) {
+        const indice = Math.floor(Math.random() * PASS_PHRASE_LIST.length);
+        palavras.push(PASS_PHRASE_LIST[indice]);
+    }
+    return palavras.join(" ");
 }
 
 // Função para obter os caracteres com base nas opções selecionadas
@@ -85,13 +156,27 @@ function copiarSenha() {
 
 // Função para atualizar o valor do tamanho da senha
 function atualizarValorTamanho() {
-    const tamanhoSenha = document.getElementById("tamanhoSenha").value;
-    document.getElementById("tamanhoValor").innerText = tamanhoSenha;
+    const slider = document.getElementById("tamanhoSenha");
+    const tamanhoSenha = Number(slider.value);
+    const badge = document.getElementById("tamanhoValor");
+    const modoPassphrase = estaEmModoPassphrase();
+
+    if (modoPassphrase) {
+        ultimoNumeroPalavras = tamanhoSenha;
+        badge.innerText = `${tamanhoSenha} palavras`;
+    } else {
+        ultimoComprimentoSenha = tamanhoSenha;
+        badge.innerText = `${tamanhoSenha}`;
+    }
 }
 
 // Função para calcular o tempo de quebra da senha
 function calcularTempoQuebra(numCaracteres, comprimentoSenha) {
     const tentativasPorSegundo = 1000000000; // 1 bilhão de tentativas por segundo
+    if (!numCaracteres || !comprimentoSenha) {
+        document.getElementById("tempoQuebra").innerText = "Gere uma combinação para estimar o tempo de quebra.";
+        return;
+    }
     const totalCombinacoes = Math.pow(numCaracteres, comprimentoSenha);
     const tempoSegundos = totalCombinacoes / tentativasPorSegundo;
     const tempoDias = tempoSegundos / (60 * 60 * 24);
@@ -235,5 +320,15 @@ function excluirSenhaDoStorage(index) {
     carregarSenhasDoStorage();
 }
 
-// Carrega as senhas salvas ao carregar a página
-window.onload = carregarSenhasDoStorage;
+function inicializarAplicacao() {
+    const passphraseToggle = document.getElementById("usarPassphrases");
+    if (passphraseToggle) {
+        passphraseToggle.addEventListener("change", handlePassphraseToggle);
+    }
+
+    configurarSliderParaModoAtual();
+    carregarSenhasDoStorage();
+    atualizarValorTamanho();
+}
+
+window.addEventListener("DOMContentLoaded", inicializarAplicacao);
