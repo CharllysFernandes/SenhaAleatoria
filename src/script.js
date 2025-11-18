@@ -81,10 +81,10 @@ function gerarSenha() {
 function gerarPassphrase(quantidadePalavras) {
     const palavras = [];
     for (let i = 0; i < quantidadePalavras; i++) {
-        const indice = Math.floor(Math.random() * PASS_PHRASE_LIST.length);
+        const indice = gerarIndiceAleatorio(PASS_PHRASE_LIST.length);
         palavras.push(PASS_PHRASE_LIST[indice]);
     }
-    return palavras.join(" ");
+    return palavras.join("-");
 }
 
 // Função para obter os caracteres com base nas opções selecionadas
@@ -96,11 +96,34 @@ function obterCaracteres(usarLetras, usarNumeros, usarCaracteresEspeciais) {
     return chars;
 }
 
+function gerarIndiceAleatorio(limite) {
+    if (limite <= 0) {
+        return 0;
+    }
+
+    const cryptoObj = window.crypto || window.msCrypto;
+    if (!cryptoObj || typeof cryptoObj.getRandomValues !== "function") {
+        return Math.floor(Math.random() * limite);
+    }
+
+    const maximoSeguro = Math.floor(0xffffffff / limite) * limite;
+    const buffer = new Uint32Array(1);
+
+    while (true) {
+        cryptoObj.getRandomValues(buffer);
+        const valor = buffer[0];
+        if (valor < maximoSeguro) {
+            return valor % limite;
+        }
+    }
+}
+
 // Função para gerar uma string aleatória
 function gerarStringAleatoria(chars, tamanho) {
     let resultado = "";
     for (let i = 0; i < tamanho; i++) {
-        resultado += chars.charAt(Math.floor(Math.random() * chars.length));
+        const indice = gerarIndiceAleatorio(chars.length);
+        resultado += chars.charAt(indice);
     }
     return resultado;
 }
