@@ -121,26 +121,44 @@ function calcularTempoQuebraTexto(tempoDias) {
 
 // Função para criar tooltip
 function criarTooltip(element) {
-    const infoIcon = document.createElement("i");
-    infoIcon.className = "bi bi-info-circle ms-2";
-    infoIcon.setAttribute("data-bs-toggle", "tooltip");
-    infoIcon.setAttribute("data-bs-placement", "right");
-    infoIcon.setAttribute("title", "O cálculo da força bruta envolve tentar todas as combinações possíveis de caracteres até encontrar a senha correta. O tempo estimado depende do número de caracteres possíveis, do comprimento da senha e da taxa de tentativas por segundo.");
+    if (!element || !element.parentNode) return;
 
-    const existingIcon = element.nextSibling;
-    if (existingIcon && existingIcon.tagName === "I") {
+    const tooltipText = "O cálculo da força bruta envolve tentar todas as combinações possíveis de caracteres até encontrar a senha correta. O tempo estimado depende do número de caracteres possíveis, do comprimento da senha e da taxa de tentativas por segundo.";
+    const container = element.parentNode;
+
+    const existingIcon = container.querySelector(".tempo-tooltip-icon");
+    if (existingIcon) {
+        const instance = bootstrap.Tooltip.getInstance(existingIcon);
+        if (instance) {
+            instance.dispose();
+        }
         existingIcon.remove();
     }
 
-    element.parentNode.appendChild(infoIcon);
+    const infoIcon = document.createElement("i");
+    infoIcon.className = "tempo-tooltip-icon bi bi-info-circle ms-2";
+    infoIcon.setAttribute("data-bs-toggle", "tooltip");
+    infoIcon.setAttribute("data-bs-placement", "right");
+    infoIcon.setAttribute("title", tooltipText);
+
+    container.appendChild(infoIcon);
     new bootstrap.Tooltip(infoIcon);
 }
 
 // Função para salvar senha no Local Storage
 function salvarSenhaNoStorage(senha) {
-    let senhas = JSON.parse(localStorage.getItem("senhas")) || [];
-    senhas.push(senha);
-    localStorage.setItem("senhas", JSON.stringify(senhas));
+    const senhasArmazenadas = JSON.parse(localStorage.getItem("senhas")) || [];
+    const senhasNormalizadas = senhasArmazenadas.map((item) =>
+        typeof item === "string" ? { valor: item } : item
+    );
+
+    const registro = {
+        valor: senha,
+        criadoEm: new Date().toISOString()
+    };
+
+    senhasNormalizadas.push(registro);
+    localStorage.setItem("senhas", JSON.stringify(senhasNormalizadas));
 }
 
 // Função para carregar senhas do Local Storage
@@ -149,13 +167,41 @@ function carregarSenhasDoStorage() {
     historicoSenhas.innerHTML = ""; // Limpar o conteúdo anterior
 
     let senhas = JSON.parse(localStorage.getItem("senhas")) || [];
-    senhas.forEach((senha, index) => {
+    if (senhas.length === 0) {
         const li = document.createElement("li");
-        li.className = "fw-lighter text-light list-group-item list-group-item-action d-flex justify-content-between align-items-center bg-dark";
-        li.innerText = senha;
+        li.className = "history-empty";
+        li.innerHTML = '<i class="bi bi-journal-text me-2"></i> Nenhuma senha gerada ainda. Gere uma nova e ela aparecerá aqui.';
+        historicoSenhas.appendChild(li);
+        return;
+    }
 
-        const btnExcluir = document.createElement("span");
-        btnExcluir.className = "text-danger bi bi-x-lg text-light";
+    senhas.forEach((entrada, index) => {
+        const registro = typeof entrada === "string" ? { valor: entrada } : entrada;
+        const valorSenha = registro?.valor || registro?.senha || "";
+        const timestamp = registro?.criadoEm || registro?.createdAt;
+
+        const li = document.createElement("li");
+        li.className = "history-item";
+
+        const wrapper = document.createElement("div");
+        wrapper.className = "history-text";
+
+        const valor = document.createElement("span");
+        valor.className = "history-value";
+        valor.innerText = valorSenha;
+
+        const data = document.createElement("small");
+        data.className = "history-date";
+        data.innerText = formatarDataDoHistorico(timestamp);
+
+        wrapper.appendChild(valor);
+        wrapper.appendChild(data);
+        li.appendChild(wrapper);
+
+        const btnExcluir = document.createElement("button");
+        btnExcluir.type = "button";
+        btnExcluir.className = "history-delete bi bi-x-lg";
+        btnExcluir.setAttribute("aria-label", "Excluir senha do histórico");
         btnExcluir.onclick = function () {
             excluirSenhaDoStorage(index);
         };
@@ -163,6 +209,22 @@ function carregarSenhasDoStorage() {
         li.appendChild(btnExcluir);
         historicoSenhas.appendChild(li);
     });
+}
+
+function formatarDataDoHistorico(timestamp) {
+    if (!timestamp) {
+        return "Gerada antes do registro";
+    }
+
+    const data = new Date(timestamp);
+    if (Number.isNaN(data.getTime())) {
+        return "Gerada antes do registro";
+    }
+
+    return `Gerada em ${new Intl.DateTimeFormat("pt-BR", {
+        dateStyle: "short",
+        timeStyle: "short"
+    }).format(data)}`;
 }
 
 // Função para excluir senha do Local Storage
