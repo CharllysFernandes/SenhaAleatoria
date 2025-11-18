@@ -197,6 +197,15 @@ body {
     min-height: 3rem;
 }
 
+.tempo-quebra.is-hidden {
+    display: none;
+}
+
+.tempo-estimativa-note {
+    color: var(--muted-color);
+    font-size: 0.75rem;
+}
+
 .range-control input[type="range"] {
     accent-color: var(--accent-strong);
 }

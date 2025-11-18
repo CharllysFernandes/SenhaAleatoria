@@ -1,16 +1,75 @@
+// ===== Configuração global =====
 const PASS_PHRASE_LIST = typeof PASS_PHRASE_WORDS !== "undefined" ? PASS_PHRASE_WORDS : [];
 const DEFAULT_PASSWORD_LENGTH = 10;
 const DEFAULT_PASSPHRASE_LENGTH = 4;
+const TENTATIVAS_POR_SEGUNDO = 1000000000;
+const LOG10_TENTATIVAS_POR_SEGUNDO = Math.log10(TENTATIVAS_POR_SEGUNDO);
+const LOG10_SEGUNDOS_POR_DIA = Math.log10(60 * 60 * 24);
 const RANGE_CONFIG = {
     senha: { min: 4, max: 64, step: 2, label: "Tamanho da senha" },
     passphrase: { min: 3, max: 12, step: 1, label: "Número de palavras" }
 };
 
+const LOG_LIMIARES_TEMPO = {
+    decadasBilhoes: Math.log10(365 * 10000000000),
+    milhoesAnos: Math.log10(365 * 1000000),
+    seculos: Math.log10(365 * 100),
+    decadas: Math.log10(365 * 10),
+    anos: Math.log10(365),
+    dias: 0,
+    horas: Math.log10(1 / 24),
+    minutos: Math.log10(1 / (24 * 60)),
+    segundos: Math.log10(1 / (24 * 60 * 60))
+};
+
+const LOG_CONVERSOES = {
+    milhoesAnos: Math.log10(365 * 1000000),
+    milenios: Math.log10(365 * 1000),
+    seculos: Math.log10(365 * 100),
+    decadas: Math.log10(365 * 10),
+    anos: Math.log10(365),
+    dias: 0,
+    horas: -Math.log10(24),
+    minutos: -Math.log10(24 * 60),
+    segundos: -Math.log10(24 * 60 * 60)
+};
+
+const FAIXAS_TEMPO = [
+    { limite: LOG_LIMIARES_TEMPO.decadasBilhoes, divisor: LOG_CONVERSOES.milhoesAnos, unidade: "milhões de anos", rotulo: "Praticamente impossível" },
+    { limite: LOG_LIMIARES_TEMPO.milhoesAnos, divisor: LOG_CONVERSOES.milenios, unidade: "milênios", rotulo: "Extremamente resistente" },
+    { limite: LOG_LIMIARES_TEMPO.seculos, divisor: LOG_CONVERSOES.seculos, unidade: "séculos", rotulo: "Muito resistente" },
+    { limite: LOG_LIMIARES_TEMPO.decadas, divisor: LOG_CONVERSOES.decadas, unidade: "décadas", rotulo: "Resistente" },
+    { limite: LOG_LIMIARES_TEMPO.anos, divisor: LOG_CONVERSOES.anos, unidade: "anos", rotulo: "Boa proteção" },
+    { limite: LOG_LIMIARES_TEMPO.dias, divisor: LOG_CONVERSOES.dias, unidade: "dias", rotulo: "Proteção básica" },
+    { limite: LOG_LIMIARES_TEMPO.horas, divisor: LOG_CONVERSOES.horas, unidade: "horas", rotulo: "Vulnerável" },
+    { limite: LOG_LIMIARES_TEMPO.minutos, divisor: LOG_CONVERSOES.minutos, unidade: "minutos", rotulo: "Muito vulnerável" },
+    { limite: LOG_LIMIARES_TEMPO.segundos, divisor: LOG_CONVERSOES.segundos, unidade: "segundos", rotulo: "Quase imediata" },
+    { limite: -Infinity, divisor: LOG_CONVERSOES.segundos, unidade: "segundos", rotulo: "Instantânea" }
+];
+
 let ultimoComprimentoSenha = DEFAULT_PASSWORD_LENGTH;
 let ultimoNumeroPalavras = DEFAULT_PASSPHRASE_LENGTH;
 
+// ===== Utilidades gerais =====
+function getElement(id) {
+    return document.getElementById(id);
+}
+
+function getSlider() {
+    return getElement("tamanhoSenha");
+}
+
+function getSenhaInput() {
+    return getElement("senha");
+}
+
+function getTempoQuebraElement() {
+    return getElement("tempoQuebra");
+}
+
 function estaEmModoPassphrase() {
-    return document.getElementById("usarPassphrases").checked;
+    const toggle = getElement("usarPassphrases");
+    return Boolean(toggle?.checked);
 }
 
 function clamp(valor, minimo, maximo) {
@@ -18,16 +77,15 @@ function clamp(valor, minimo, maximo) {
 }
 
 function configurarSliderParaModoAtual() {
-    const slider = document.getElementById("tamanhoSenha");
-    const label = document.getElementById("tamanhoLabel");
+    const slider = getSlider();
+    const label = getElement("tamanhoLabel");
     const modoPassphrase = estaEmModoPassphrase();
     const config = modoPassphrase ? RANGE_CONFIG.passphrase : RANGE_CONFIG.senha;
+    const valor = modoPassphrase ? ultimoNumeroPalavras : ultimoComprimentoSenha;
 
     slider.min = config.min;
     slider.max = config.max;
     slider.step = config.step;
-
-    const valor = modoPassphrase ? ultimoNumeroPalavras : ultimoComprimentoSenha;
     slider.value = clamp(valor, config.min, config.max);
     label.textContent = config.label;
     atualizarValorTamanho();
@@ -37,57 +95,81 @@ function handlePassphraseToggle() {
     configurarSliderParaModoAtual();
 }
 
-// Função para gerar senha ou passphrase
+function atualizarValorTamanho() {
+    const slider = getSlider();
+    const badge = getElement("tamanhoValor");
+    const valorAtual = Number(slider.value);
+
+    if (estaEmModoPassphrase()) {
+        ultimoNumeroPalavras = valorAtual;
+        badge.innerText = `${valorAtual} palavras`;
+    } else {
+        ultimoComprimentoSenha = valorAtual;
+        badge.innerText = `${valorAtual}`;
+    }
+}
+
+// ===== Geração de combinações =====
 function gerarSenha() {
-    const slider = document.getElementById("tamanhoSenha");
-    const usarPassphrases = estaEmModoPassphrase();
-
-    if (usarPassphrases) {
-        if (!PASS_PHRASE_LIST.length) {
-            alert("A lista de palavras ainda não foi carregada. Tente novamente mais tarde.");
-            return;
-        }
-
-        const quantidadePalavras = parseInt(slider.value, 10);
-        const passphrase = gerarPassphrase(quantidadePalavras);
-        document.getElementById("senha").value = passphrase;
-        calcularTempoQuebra(PASS_PHRASE_LIST.length, quantidadePalavras);
-        salvarSenhaNoStorage(passphrase);
-        carregarSenhasDoStorage();
+    const resultado = estaEmModoPassphrase() ? gerarResultadoPassphrase() : gerarResultadoAlfanumerico();
+    if (!resultado) {
         return;
     }
 
-    const usarLetras = document.getElementById("usarLetras").checked;
-    const usarNumeros = document.getElementById("usarNumeros").checked;
-    const usarCaracteresEspeciais = document.getElementById("usarCaracteresEspeciais").checked;
-
-    const chars = obterCaracteres(usarLetras, usarNumeros, usarCaracteresEspeciais);
-    if (!chars.length) {
-        alert("Selecione pelo menos um conjunto de caracteres para gerar a senha.");
-        return;
-    }
-
-    const tamanhoSenha = parseInt(slider.value, 10);
-    const senha = gerarStringAleatoria(chars, tamanhoSenha);
-
-    const senhaFormatada = formatarSenha(tamanhoSenha, senha);
-    document.getElementById("senha").value = senhaFormatada.trim();
-
-    calcularTempoQuebra(chars.length, tamanhoSenha);
-    salvarSenhaNoStorage(senhaFormatada.trim());
+    atualizarCampoSenha(resultado.senha);
+    calcularTempoQuebra(resultado.cardinalidade, resultado.comprimento);
+    salvarSenhaNoStorage(resultado.senha);
     carregarSenhasDoStorage();
 }
 
-function gerarPassphrase(quantidadePalavras) {
+function gerarResultadoPassphrase() {
+    if (!PASS_PHRASE_LIST.length) {
+        alert("A lista de palavras ainda não foi carregada. Tente novamente mais tarde.");
+        return null;
+    }
+
+    const quantidade = parseInt(getSlider().value, 10);
     const palavras = [];
-    for (let i = 0; i < quantidadePalavras; i++) {
+
+    for (let i = 0; i < quantidade; i++) {
         const indice = gerarIndiceAleatorio(PASS_PHRASE_LIST.length);
         palavras.push(PASS_PHRASE_LIST[indice]);
     }
-    return palavras.join("-");
+
+    return {
+        senha: palavras.join("-"),
+        cardinalidade: PASS_PHRASE_LIST.length,
+        comprimento: quantidade
+    };
 }
 
-// Função para obter os caracteres com base nas opções selecionadas
+function gerarResultadoAlfanumerico() {
+    const usarLetras = getElement("usarLetras")?.checked;
+    const usarNumeros = getElement("usarNumeros")?.checked;
+    const usarCaracteresEspeciais = getElement("usarCaracteresEspeciais")?.checked;
+    const chars = obterCaracteres(usarLetras, usarNumeros, usarCaracteresEspeciais);
+
+    if (!chars.length) {
+        alert("Selecione pelo menos um conjunto de caracteres para gerar a senha.");
+        return null;
+    }
+
+    const tamanhoSenha = parseInt(getSlider().value, 10);
+    const bruta = gerarStringAleatoria(chars, tamanhoSenha);
+    const formatada = formatarSenha(tamanhoSenha, bruta).trim();
+
+    return {
+        senha: formatada,
+        cardinalidade: chars.length,
+        comprimento: tamanhoSenha
+    };
+}
+
+function atualizarCampoSenha(valor) {
+    const input = getSenhaInput();
+    input.value = valor;
+}
+
 function obterCaracteres(usarLetras, usarNumeros, usarCaracteresEspeciais) {
     let chars = "";
     if (usarLetras) chars += "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -118,7 +200,6 @@ function gerarIndiceAleatorio(limite) {
     }
 }
 
-// Função para gerar uma string aleatória
 function gerarStringAleatoria(chars, tamanho) {
     let resultado = "";
     for (let i = 0; i < tamanho; i++) {
@@ -128,20 +209,17 @@ function gerarStringAleatoria(chars, tamanho) {
     return resultado;
 }
 
-// Função para formatar a senha com base no tamanho
+// ===== Formatação e análise =====
 function formatarSenha(tamanhoSenha, senha) {
-    let senhaFormatada = "";
     if (tamanhoSenha > 16) {
-        senhaFormatada = dividirEmBlocos(senha, 8);
-    } else if (tamanhoSenha > 12) {
-        senhaFormatada = dividirEmBlocos(senha, 6);
-    } else {
-        senhaFormatada = dividirAoMeio(senha);
+        return dividirEmBlocos(senha, 8);
     }
-    return senhaFormatada;
+    if (tamanhoSenha > 12) {
+        return dividirEmBlocos(senha, 6);
+    }
+    return dividirAoMeio(senha);
 }
 
-// Função para dividir a senha em blocos
 function dividirEmBlocos(senha, tamanhoBloco) {
     let resultado = "";
     const numBlocos = Math.floor(senha.length / tamanhoBloco);
@@ -159,82 +237,84 @@ function dividirEmBlocos(senha, tamanhoBloco) {
     for (let i = 0; i < senha.length; i += tamanhoBloco) {
         resultado += senha.slice(i, i + tamanhoBloco) + "-";
     }
-    return resultado.slice(0, -1); // Remove o último hífen
+    return resultado.slice(0, -1);
 }
 
-// Função para dividir a senha ao meio
 function dividirAoMeio(senha) {
     const metade = Math.ceil(senha.length / 2);
     return senha.slice(0, metade) + "-" + senha.slice(metade);
 }
 
-// Função para copiar a senha
-function copiarSenha() {
-    const senhaInput = document.getElementById("senha");
-    senhaInput.select();
-    senhaInput.setSelectionRange(0, 99999); // Para dispositivos móveis
-    document.execCommand("copy");
-    alert("Senha copiada para a área de transferência!");
-}
-
-// Função para atualizar o valor do tamanho da senha
-function atualizarValorTamanho() {
-    const slider = document.getElementById("tamanhoSenha");
-    const tamanhoSenha = Number(slider.value);
-    const badge = document.getElementById("tamanhoValor");
-    const modoPassphrase = estaEmModoPassphrase();
-
-    if (modoPassphrase) {
-        ultimoNumeroPalavras = tamanhoSenha;
-        badge.innerText = `${tamanhoSenha} palavras`;
-    } else {
-        ultimoComprimentoSenha = tamanhoSenha;
-        badge.innerText = `${tamanhoSenha}`;
-    }
-}
-
-// Função para calcular o tempo de quebra da senha
 function calcularTempoQuebra(numCaracteres, comprimentoSenha) {
-    const tentativasPorSegundo = 1000000000; // 1 bilhão de tentativas por segundo
-    if (!numCaracteres || !comprimentoSenha) {
-        document.getElementById("tempoQuebra").innerText = "Gere uma combinação para estimar o tempo de quebra.";
+    if (!numCaracteres || !comprimentoSenha || numCaracteres <= 0 || comprimentoSenha <= 0) {
+        renderizarTempoQuebra("Gere uma combinação para estimar o tempo de quebra.");
         return;
     }
-    const totalCombinacoes = Math.pow(numCaracteres, comprimentoSenha);
-    const tempoSegundos = totalCombinacoes / tentativasPorSegundo;
-    const tempoDias = tempoSegundos / (60 * 60 * 24);
-    const tempoQuebra = calcularTempoQuebraTexto(tempoDias);
 
-    const tempoQuebraElement = document.getElementById("tempoQuebra");
-    tempoQuebraElement.innerText = tempoQuebra;
-    criarTooltip(tempoQuebraElement);
-}
+    const log10TotalCombinacoes = comprimentoSenha * Math.log10(numCaracteres);
+    const log10TempoSegundos = log10TotalCombinacoes - LOG10_TENTATIVAS_POR_SEGUNDO;
+    const log10TempoDias = log10TempoSegundos - LOG10_SEGUNDOS_POR_DIA;
 
-// Função para calcular o texto do tempo de quebra
-function calcularTempoQuebraTexto(tempoDias) {
-    if (tempoDias > 365 * 10000000000) {
-        return `Tempo estimado para quebrar a senha: aproximadamente ${(tempoDias / (365 * 1000000000)).toExponential(2)} milhões de anos.`;
-    } else if (tempoDias > 365 * 1000000) {
-        return `Tempo estimado para quebrar a senha: aproximadamente ${(tempoDias / (365 * 1000)).toFixed(0)} milênios.`;
-    } else if (tempoDias > 365 * 100) {
-        return `Tempo estimado para quebrar a senha: aproximadamente ${(tempoDias / (365 * 100)).toFixed(0)} séculos.`;
-    } else if (tempoDias > 365 * 10) {
-        return `Tempo estimado para quebrar a senha: aproximadamente ${(tempoDias / (365 * 10)).toFixed(0)} décadas.`;
-    } else if (tempoDias > 365) {
-        return `Tempo estimado para quebrar a senha: aproximadamente ${(tempoDias / 365).toFixed(0)} anos.`;
-    } else {
-        return `Tempo estimado para quebrar a senha: aproximadamente ${tempoDias.toFixed(0)} dias.`;
+    if (!Number.isFinite(log10TempoDias)) {
+        renderizarTempoQuebra("Tempo estimado para quebrar a senha: praticamente impossível com força bruta conhecida.");
+        return;
     }
+
+    const resumo = obterResumoTempo(log10TempoDias);
+    renderizarTempoQuebra(
+        `<strong>${resumo.rotulo}:</strong> ${resumo.descricao} <span class="tempo-estimativa-note">(estimativa teórica)</span>`,
+        true
+    );
 }
 
-// Função para criar tooltip
+function obterResumoTempo(log10TempoDias) {
+    for (const faixa of FAIXAS_TEMPO) {
+        if (log10TempoDias > faixa.limite) {
+            return {
+                rotulo: faixa.rotulo,
+                descricao: formatarEscala(log10TempoDias - faixa.divisor, faixa.unidade)
+            };
+        }
+    }
+
+    return {
+        rotulo: "Indeterminado",
+        descricao: "Não foi possível calcular a estimativa."
+    };
+}
+
+function formatarEscala(logValor, unidade) {
+    if (!Number.isFinite(logValor)) {
+        return `praticamente impossível em termos de ${unidade}`;
+    }
+    if (logValor > 12) {
+        return `aproximadamente 10^${logValor.toFixed(2)} ${unidade}`;
+    }
+
+    const valor = Math.pow(10, logValor);
+    if (!Number.isFinite(valor)) {
+        return `aproximadamente 10^${logValor.toFixed(2)} ${unidade}`;
+    }
+
+    let texto;
+    if (valor >= 100) {
+        texto = valor.toFixed(0);
+    } else if (valor >= 10) {
+        texto = valor.toFixed(1);
+    } else {
+        texto = valor.toFixed(2);
+    }
+
+    return `aproximadamente ${texto} ${unidade}`;
+}
+
 function criarTooltip(element) {
     if (!element || !element.parentNode) return;
 
-    const tooltipText = "O cálculo da força bruta envolve tentar todas as combinações possíveis de caracteres até encontrar a senha correta. O tempo estimado depende do número de caracteres possíveis, do comprimento da senha e da taxa de tentativas por segundo.";
+    const tooltipText = "Estimativa baseada em 1 bilhão de tentativas por segundo e força bruta pura. Algoritmos de hashing lentos, autenticação em múltiplos fatores e limitações reais podem prolongar ou reduzir esse tempo.";
     const container = element.parentNode;
-
     const existingIcon = container.querySelector(".tempo-tooltip-icon");
+
     if (existingIcon) {
         const instance = bootstrap.Tooltip.getInstance(existingIcon);
         if (instance) {
@@ -253,29 +333,48 @@ function criarTooltip(element) {
     new bootstrap.Tooltip(infoIcon);
 }
 
-// Função para salvar senha no Local Storage
+function renderizarTempoQuebra(conteudo, usarHTML = false) {
+    const destino = getTempoQuebraElement();
+    if (!destino) return;
+
+    const vazio = !conteudo;
+    destino.classList.toggle("is-hidden", vazio);
+
+    if (vazio) {
+        destino.innerHTML = "";
+        return;
+    }
+
+    if (usarHTML) {
+        destino.innerHTML = conteudo;
+    } else {
+        destino.innerText = conteudo;
+    }
+
+    criarTooltip(destino);
+}
+
+// ===== Persistência =====
 function salvarSenhaNoStorage(senha) {
     const senhasArmazenadas = JSON.parse(localStorage.getItem("senhas")) || [];
     const senhasNormalizadas = senhasArmazenadas.map((item) =>
         typeof item === "string" ? { valor: item } : item
     );
 
-    const registro = {
+    senhasNormalizadas.push({
         valor: senha,
         criadoEm: new Date().toISOString()
-    };
+    });
 
-    senhasNormalizadas.push(registro);
     localStorage.setItem("senhas", JSON.stringify(senhasNormalizadas));
 }
 
-// Função para carregar senhas do Local Storage
 function carregarSenhasDoStorage() {
-    const historicoSenhas = document.getElementById("historicoSenhas");
-    historicoSenhas.innerHTML = ""; // Limpar o conteúdo anterior
+    const historicoSenhas = getElement("historicoSenhas");
+    historicoSenhas.innerHTML = "";
 
-    let senhas = JSON.parse(localStorage.getItem("senhas")) || [];
-    if (senhas.length === 0) {
+    const senhas = JSON.parse(localStorage.getItem("senhas")) || [];
+    if (!senhas.length) {
         const li = document.createElement("li");
         li.className = "history-empty";
         li.innerHTML = '<i class="bi bi-journal-text me-2"></i> Nenhuma senha gerada ainda. Gere uma nova e ela aparecerá aqui.';
@@ -335,23 +434,30 @@ function formatarDataDoHistorico(timestamp) {
     }).format(data)}`;
 }
 
-// Função para excluir senha do Local Storage
 function excluirSenhaDoStorage(index) {
-    let senhas = JSON.parse(localStorage.getItem("senhas")) || [];
+    const senhas = JSON.parse(localStorage.getItem("senhas")) || [];
     senhas.splice(index, 1);
     localStorage.setItem("senhas", JSON.stringify(senhas));
     carregarSenhasDoStorage();
 }
 
+// ===== Interação com UI =====
+function copiarSenha() {
+    const senhaInput = getSenhaInput();
+    senhaInput.select();
+    senhaInput.setSelectionRange(0, 99999);
+    document.execCommand("copy");
+    alert("Senha copiada para a área de transferência!");
+}
+
 function inicializarAplicacao() {
-    const passphraseToggle = document.getElementById("usarPassphrases");
-    if (passphraseToggle) {
-        passphraseToggle.addEventListener("change", handlePassphraseToggle);
-    }
+    const passphraseToggle = getElement("usarPassphrases");
+    passphraseToggle?.addEventListener("change", handlePassphraseToggle);
 
     configurarSliderParaModoAtual();
     carregarSenhasDoStorage();
     atualizarValorTamanho();
+    renderizarTempoQuebra("");
 }
 
 window.addEventListener("DOMContentLoaded", inicializarAplicacao);
